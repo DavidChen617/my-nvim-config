@@ -1,0 +1,14 @@
+# Windows/Linux OS junk files (in case this repo gets cloned onto a
+# machine without ~/.gitignore_global set up — macOS's .DS_Store is
+# already covered by that global ignore, kept here as a safety net anyway).
+.DS_Store
+Thumbs.db
+
+# lua_ls sometimes writes an absolute, machine-specific workspace config
+# here; not present yet, but shouldn't be committed if it shows up.
+.luarc.json
+
+# Convention for personal/per-machine overrides (secrets, local tweaks)
+# that shouldn't go into a shared dotfiles repo. Doesn't exist yet —
+# create lua/local.lua and `require 'local'` from init.lua if needed.
+lua/local.lua

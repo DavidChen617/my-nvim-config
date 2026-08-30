@@ -1,0 +1,388 @@
+return {
+  -- Statusline
+  { 'nvim-lualine/lualine.nvim', opts = {} },
+
+  -- Always-visible buffer tabs at the top of the screen
+  {
+    'akinsho/bufferline.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    event = 'VeryLazy',
+    opts = {
+      options = {
+        mode = 'buffers',
+        numbers = 'none',
+        close_command = 'bdelete %d',
+        path_components = 1, -- show file name only, not the full path
+        modified_icon = '●',
+        always_show_bufferline = true,
+        diagnostics = 'nvim_lsp', -- show LSP error/warning counts on each tab
+        separator_style = 'thin',
+      },
+    },
+  },
+
+  -- Git signs in the sign column
+  { 'lewis6991/gitsigns.nvim', opts = {} },
+
+  -- Shows pending keybinds
+  { 'folke/which-key.nvim', event = 'VeryLazy', opts = {} },
+
+  -- Auto-detect indentation (tabstop/shiftwidth) per file
+  { 'tpope/vim-sleuth' },
+
+  -- Auto-close brackets/quotes
+  { 'windwp/nvim-autopairs', event = 'InsertEnter', opts = {} },
+
+  -- Fuzzy finder
+  {
+    'nvim-telescope/telescope.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    cmd = 'Telescope',
+    keys = {
+      { '<leader>sf', '<cmd>Telescope find_files<CR>', desc = 'Search Files' },
+      { '<leader>sg', '<cmd>Telescope live_grep<CR>', desc = 'Search by Grep' },
+      { '<leader>sb', '<cmd>Telescope buffers<CR>', desc = 'Search Buffers' },
+      { '<leader>sh', '<cmd>Telescope help_tags<CR>', desc = 'Search Help' },
+      { '<leader>sd', '<cmd>Telescope diagnostics<CR>', desc = 'Search Diagnostics' },
+    },
+  },
+
+  -- File explorer
+  {
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons',
+      'MunifTanjim/nui.nvim',
+    },
+    keys = {
+      { '<leader>e', '<cmd>Neotree toggle<CR>', desc = 'Toggle file explorer' },
+    },
+    opts = {
+      filesystem = {
+        follow_current_file = { enabled = true },
+        hijack_netrw_behavior = 'open_current',
+      },
+    },
+  },
+
+  -- Treesitter: better syntax highlighting / indent.
+  -- On the (now-archived) master branch, `master`'s query_predicates hits
+  -- a nil-node crash against Neovim 0.12's changed treesitter API
+  -- (attempt to call method 'range' (a nil value) — see
+  -- https://github.com/nvim-treesitter/nvim-treesitter/issues/8618).
+  -- master won't get a fix (announced archived), so this is on `main`,
+  -- the actively maintained rewrite, which needs Neovim >= 0.12 and a
+  -- different setup API (no more nvim-treesitter.configs / highlight.enable).
+  {
+    'nvim-treesitter/nvim-treesitter',
+    branch = 'main',
+    lazy = false,
+    build = ':TSUpdate',
+    config = function()
+      local parsers = {
+        'c',
+        'c_sharp',
+        'bash',
+        'yaml',
+        'json',
+        'javascript',
+        'typescript',
+        'markdown',
+        'markdown_inline',
+        'sql',
+        'lua',
+        'vim',
+        'vimdoc',
+        'dockerfile',
+      }
+      local filetypes = {
+        'c',
+        'cs',
+        'sh',
+        'bash',
+        'yaml',
+        'json',
+        'jsonc',
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'markdown',
+        'sql',
+        'lua',
+        'vim',
+        'help',
+        'dockerfile',
+      }
+
+      require('nvim-treesitter').setup {
+        install_dir = vim.fn.stdpath 'data' .. '/site',
+      }
+      require('nvim-treesitter').install(parsers)
+
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = filetypes,
+        callback = function()
+          vim.treesitter.start()
+          vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end,
+      })
+    end,
+  },
+
+  -- Completion engine
+  {
+    'saghen/blink.cmp',
+    version = '*',
+    dependencies = { 'rafamadriz/friendly-snippets' },
+    opts = {
+      keymap = {
+        preset = 'enter',
+        -- The 'enter' preset's scroll_documentation_* only scrolls the
+        -- completion-item doc window; blink.cmp doesn't expose a command
+        -- for scrolling the signature help (overload) window, so scroll
+        -- that one directly when it's open, falling back otherwise.
+        ['<C-f>'] = {
+          function()
+            if require('blink.cmp').is_signature_visible() then
+              require('blink.cmp.signature.window').scroll_down(4)
+              return true
+            end
+          end,
+          'scroll_documentation_down',
+          'fallback',
+        },
+        ['<C-b>'] = {
+          function()
+            if require('blink.cmp').is_signature_visible() then
+              require('blink.cmp.signature.window').scroll_up(4)
+              return true
+            end
+          end,
+          'scroll_documentation_up',
+          'fallback',
+        },
+      },
+      appearance = { nerd_font_variant = 'mono' },
+      completion = { documentation = { auto_show = true } },
+      sources = { default = { 'lsp', 'path', 'snippets', 'buffer' } },
+      signature = { enabled = true },
+    },
+    opts_extend = { 'sources.default' },
+  },
+
+  -- LSP
+  {
+    'neovim/nvim-lspconfig',
+    dependencies = {
+      {
+        'mason-org/mason.nvim',
+        opts = {
+          -- roslyn isn't in the official Mason registry yet; it's only
+          -- published on this community registry maintained by roslyn.nvim's author.
+          registries = {
+            'github:mason-org/mason-registry',
+            'github:Crashdummyy/mason-registry',
+          },
+        },
+      },
+      'mason-org/mason-lspconfig.nvim',
+      'saghen/blink.cmp',
+    },
+    config = function()
+      -- Give every LSP server the extra capabilities blink.cmp provides
+      vim.lsp.config('*', {
+        capabilities = require('blink.cmp').get_lsp_capabilities(),
+      })
+
+      -- Servers we want installed + enabled.
+      -- Empty {} means "use nvim-lspconfig's defaults, no overrides".
+      local servers = {
+        clangd = {},      -- C
+        bashls = {},      -- sh
+        yamlls = {},      -- YAML
+        ts_ls = {},       -- JS/TS
+        sqlls = {},       -- SQL / PostgreSQL
+        marksman = {},    -- Markdown
+        dockerls = {},    -- Dockerfile
+        jsonls = {},      -- JSON (e.g. appsettings.json)
+        lua_ls = {
+          settings = {
+            Lua = {
+              runtime = { version = 'LuaJIT' },
+              diagnostics = { globals = { 'vim' } },
+              workspace = {
+                library = { vim.env.VIMRUNTIME },
+                checkThirdParty = false,
+              },
+            },
+          },
+        },
+      }
+
+      for name, cfg in pairs(servers) do
+        vim.lsp.config(name, cfg)
+      end
+
+      require('mason-lspconfig').setup {
+        ensure_installed = vim.tbl_keys(servers),
+        -- omnisharp is left over from the old config; C# is handled by
+        -- roslyn.nvim instead, so don't let mason-lspconfig auto-enable it.
+        automatic_enable = { exclude = { 'omnisharp' } },
+      }
+
+      -- Keymaps that only apply in a buffer once an LSP has attached to it
+      vim.api.nvim_create_autocmd('LspAttach', {
+        callback = function(ev)
+          local map = function(keys, fn, desc)
+            vim.keymap.set('n', keys, fn, { buffer = ev.buf, desc = 'LSP: ' .. desc })
+          end
+          map('gd', require('telescope.builtin').lsp_definitions, 'Goto Definition')
+          map('gr', require('telescope.builtin').lsp_references, 'Goto References')
+          map('gi', require('telescope.builtin').lsp_implementations, 'Goto Implementation')
+          map('K', vim.lsp.buf.hover, 'Hover Documentation')
+          map('<leader>rn', vim.lsp.buf.rename, 'Rename')
+          map('<leader>ca', vim.lsp.buf.code_action, 'Code Action')
+        end,
+      })
+    end,
+  },
+
+  -- C# / .NET LSP (Roslyn language server, the modern replacement for OmniSharp)
+  {
+    'seblyng/roslyn.nvim',
+    ft = 'cs',
+    opts = {},
+  },
+
+  -- Formatting on save
+  {
+    'stevearc/conform.nvim',
+    event = { 'BufWritePre' },
+    cmd = { 'ConformInfo' },
+    keys = {
+      {
+        '<leader>f',
+        function()
+          require('conform').format { async = true }
+        end,
+        desc = 'Format buffer',
+      },
+    },
+    opts = {
+      formatters_by_ft = {
+        lua = { 'stylua' },
+        sh = { 'shfmt' },
+        cs = { 'csharpier' },
+        javascript = { 'prettier' },
+        typescript = { 'prettier' },
+        json = { 'prettier' },
+        yaml = { 'prettier' },
+        markdown = { 'prettier' },
+      },
+      -- conform's bundled csharpier def runs `dotnet csharpier --write-stdout`,
+      -- which only resolves for a *local* dotnet tool (via a tool manifest).
+      -- csharpier here is installed as a *global* tool, whose CLI (1.3.0)
+      -- also moved --write-stdout under the `format` subcommand, so call the
+      -- csharpier binary directly instead.
+      formatters = {
+        csharpier = {
+          command = 'csharpier',
+          args = { 'format', '--write-stdout', '--stdin-path', '$FILENAME' },
+        },
+      },
+      format_on_save = {
+        timeout_ms = 2000,
+        lsp_format = 'fallback',
+      },
+    },
+  },
+
+  -- Debug Adapter Protocol (C# debugging via netcoredbg)
+  {
+    'mfussenegger/nvim-dap',
+    dependencies = {
+      'rcarriga/nvim-dap-ui',
+      'nvim-neotest/nvim-nio',
+      'jay-babu/mason-nvim-dap.nvim',
+    },
+    config = function()
+      local dap = require 'dap'
+      local dapui = require 'dapui'
+      local platform = require 'platform'
+
+      -- mason's netcoredbg package has no native macOS arm64 build (only
+      -- x86_64, which fails to attach to native arm64 .NET processes under
+      -- Rosetta: "Failed command 'configurationDone': 0x80070005"), so on
+      -- macOS this is left out here and installed manually instead (see
+      -- netcoredbg_path below). Linux has a proper native mason build.
+      require('mason-nvim-dap').setup {
+        ensure_installed = platform.is_linux and { 'netcoredbg' } or {},
+        automatic_installation = true,
+      }
+
+      dapui.setup()
+      dap.listeners.before.attach.dapui_config = function()
+        dapui.open()
+      end
+      dap.listeners.before.launch.dapui_config = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated.dapui_config = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited.dapui_config = function()
+        dapui.close()
+      end
+
+      local netcoredbg_path
+      if platform.is_linux then
+        netcoredbg_path = vim.fn.stdpath 'data' .. '/mason/bin/netcoredbg'
+      else
+        -- see the mason-nvim-dap setup above for why macOS doesn't use mason's build
+        netcoredbg_path = vim.fn.stdpath 'data' .. '/netcoredbg-osx-arm64/netcoredbg/netcoredbg'
+      end
+      dap.adapters.coreclr = {
+        type = 'executable',
+        command = netcoredbg_path,
+        args = { '--interpreter=vscode' },
+      }
+
+      dap.configurations.cs = {
+        {
+          type = 'coreclr',
+          name = 'launch - netcoredbg',
+          request = 'launch',
+          program = function()
+            return vim.fn.input('Path to dll: ', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+          end,
+          cwd = '${workspaceFolder}',
+          -- netcoredbg has no Source Link / symbol server support, so
+          -- stepping into BCL/framework code (e.g. String.Concat) isn't
+          -- achievable regardless of settings — this only controls whether
+          -- a breakpoint hit inside non-user code gets auto-skipped.
+          justMyCode = false,
+        },
+        {
+          type = 'coreclr',
+          name = 'attach - netcoredbg',
+          request = 'attach',
+          processId = require('dap.utils').pick_process,
+        },
+      }
+
+      vim.fn.sign_define('DapBreakpoint', { text = '●', texthl = 'DapBreakpoint' })
+      vim.fn.sign_define('DapStopped', { text = '▶', texthl = 'DapStopped', linehl = 'DapStoppedLine' })
+
+      vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
+      vim.keymap.set('n', '<F9>', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
+      vim.keymap.set('n', '<F6>', dap.step_over, { desc = 'Debug: Step Over' })
+      vim.keymap.set('n', '<F7>', dap.step_into, { desc = 'Debug: Step Into' })
+      vim.keymap.set('n', '<F8>', dap.step_out, { desc = 'Debug: Step Out' })
+      vim.keymap.set('n', '<S-F5>', dap.terminate, { desc = 'Debug: Terminate' })
+      vim.keymap.set('n', '<leader>du', dapui.toggle, { desc = 'Debug: Toggle UI' })
+    end,
+  },
+}
