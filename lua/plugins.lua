@@ -22,7 +22,25 @@ return {
   },
 
   -- Git signs in the sign column
-  { 'lewis6991/gitsigns.nvim', opts = {} },
+  {
+    'lewis6991/gitsigns.nvim',
+    opts = {
+      on_attach = function(bufnr)
+        local gs = require('gitsigns')
+        local function map(mode, l, r, desc)
+          vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
+        end
+
+        map('n', ']c', gs.next_hunk, 'Next hunk')
+        map('n', '[c', gs.prev_hunk, 'Prev hunk')
+        map('n', '<leader>hs', gs.stage_hunk, 'Stage hunk')
+        map('n', '<leader>hr', gs.reset_hunk, 'Reset hunk')
+        map('n', '<leader>hp', gs.preview_hunk, 'Preview hunk')
+        map('n', '<leader>hb', function() gs.blame_line { full = true } end, 'Blame line')
+        map('n', '<leader>tb', gs.toggle_current_line_blame, 'Toggle line blame')
+      end,
+    },
+  },
 
   -- Shows pending keybinds
   { 'folke/which-key.nvim', event = 'VeryLazy', opts = {} },
@@ -44,6 +62,7 @@ return {
       { '<leader>sb', '<cmd>Telescope buffers<CR>', desc = 'Search Buffers' },
       { '<leader>sh', '<cmd>Telescope help_tags<CR>', desc = 'Search Help' },
       { '<leader>sd', '<cmd>Telescope diagnostics<CR>', desc = 'Search Diagnostics' },
+      { '<leader>sk', '<cmd>Telescope keymaps<CR>', desc = 'Search Keymaps' },
     },
   },
 
@@ -51,6 +70,7 @@ return {
   {
     'nvim-neo-tree/neo-tree.nvim',
     branch = 'v3.x',
+    lazy = false,
     dependencies = {
       'nvim-lua/plenary.nvim',
       'nvim-tree/nvim-web-devicons',
@@ -132,11 +152,39 @@ return {
     end,
   },
 
+  -- Render Markdown in-buffer (headings, bold/italic, lists, code blocks, etc.)
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' },
+    ft = { 'markdown' },
+    ---@module 'render-markdown'
+    ---@type render.md.UserConfig
+    opts = {},
+  },
+
+  -- Preview Markdown (incl. Mermaid diagrams) in the browser, synced live
+  {
+    'iamcco/markdown-preview.nvim',
+    cmd = { 'MarkdownPreviewToggle', 'MarkdownPreview', 'MarkdownPreviewStop' },
+    build = 'cd app && yarn install',
+    init = function()
+      vim.g.mkdp_filetypes = { 'markdown' }
+    end,
+    ft = { 'markdown' },
+    keys = {
+      { '<leader>mp', '<cmd>MarkdownPreviewToggle<CR>', desc = 'Markdown Preview' },
+    },
+  },
+
+  -- Syntax-highlighted completion labels (e.g. function signatures keep
+  -- their normal token colors instead of being one flat color) for blink.cmp
+  { 'xzbdmw/colorful-menu.nvim', opts = {} },
+
   -- Completion engine
   {
     'saghen/blink.cmp',
     version = '*',
-    dependencies = { 'rafamadriz/friendly-snippets' },
+    dependencies = { 'rafamadriz/friendly-snippets', 'xzbdmw/colorful-menu.nvim' },
     opts = {
       keymap = {
         preset = 'enter',
@@ -166,7 +214,24 @@ return {
         },
       },
       appearance = { nerd_font_variant = 'mono' },
-      completion = { documentation = { auto_show = true } },
+      completion = {
+        documentation = { auto_show = true },
+        menu = {
+          draw = {
+            columns = { { 'kind_icon' }, { 'label', gap = 1 } },
+            components = {
+              label = {
+                text = function(ctx)
+                  return require('colorful-menu').blink_components_text(ctx)
+                end,
+                highlight = function(ctx)
+                  return require('colorful-menu').blink_components_highlight(ctx)
+                end,
+              },
+            },
+          },
+        },
+      },
       sources = { default = { 'lsp', 'path', 'snippets', 'buffer' } },
       signature = { enabled = true },
     },
@@ -275,24 +340,15 @@ return {
       formatters_by_ft = {
         lua = { 'stylua' },
         sh = { 'shfmt' },
-        cs = { 'csharpier' },
         javascript = { 'prettier' },
         typescript = { 'prettier' },
         json = { 'prettier' },
         yaml = { 'prettier' },
         markdown = { 'prettier' },
       },
-      -- conform's bundled csharpier def runs `dotnet csharpier --write-stdout`,
-      -- which only resolves for a *local* dotnet tool (via a tool manifest).
-      -- csharpier here is installed as a *global* tool, whose CLI (1.3.0)
-      -- also moved --write-stdout under the `format` subcommand, so call the
-      -- csharpier binary directly instead.
-      formatters = {
-        csharpier = {
-          command = 'csharpier',
-          args = { 'format', '--write-stdout', '--stdin-path', '$FILENAME' },
-        },
-      },
+      -- No formatter registered for 'cs': lsp_format = 'fallback' below makes
+      -- conform hand C# off to the buffer's LSP client (roslyn.nvim's Roslyn
+      -- Language Server), both for <leader>f and on save.
       format_on_save = {
         timeout_ms = 2000,
         lsp_format = 'fallback',

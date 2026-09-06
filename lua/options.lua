@@ -24,6 +24,9 @@ vim.opt.splitbelow = true
 vim.opt.undofile = true
 vim.opt.termguicolors = true
 
+-- Rounded borders on all floating windows (hover, signature, completion menu, etc.)
+vim.opt.winborder = 'rounded'
+
 -- Folding based on treesitter, starting fully unfolded
 vim.o.foldmethod = 'expr'
 vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
