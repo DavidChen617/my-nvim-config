@@ -60,6 +60,18 @@ for the full list):
 | `<F5>` / `<F9>` / `<F6>`/`<F7>`/`<F8>` / `<S-F5>` | Debug: continue / toggle breakpoint / step over/into/out / terminate |
 | `<leader>du` | Toggle debug UI (dapui) |
 
+## TODO
+
+- Enable LSP inlay hints (`vim.lsp.inlay_hint.enable()`) — shows inferred
+  types/param names inline, works well with roslyn.nvim for C#.
+- Consider `trouble.nvim` for a nicer diagnostics/quickfix/references list
+  UI instead of the default quickfix window.
+- Consider `snacks.nvim` (folke) — bundles dashboard, zen mode, a floating
+  lazygit terminal, picker, notify, etc.; community is consolidating a lot
+  of single-purpose plugins into it.
+- Watch `vim.pack` (native package manager, Nvim 0.12+) as a possible
+  replacement for lazy.nvim — not urgent, just worth tracking.
+
 ## Known limitations
 
 - `netcoredbg` has no Source Link / symbol server support — stepping into

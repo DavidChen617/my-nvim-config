@@ -18,6 +18,21 @@ return {
         diagnostics = 'nvim_lsp', -- show LSP error/warning counts on each tab
         separator_style = 'thin',
       },
+      -- Colors pulled from the Rider Islands Dark palette (see init.lua's
+      -- set_rider_islands_dark_syntax) so the tab bar matches the rest of
+      -- the syntax colors instead of a generic default.
+      highlights = {
+        buffer_selected = { fg = '#BDBDBD', bold = true },
+        buffer_visible = { fg = '#6C7280' },
+        background = { fg = '#4B4B4B' },
+        indicator_selected = { fg = '#6C95EB' },
+        modified = { fg = '#ED94C0' },
+        modified_selected = { fg = '#ED94C0' },
+        separator = { fg = '#333333' },
+        separator_selected = { fg = '#333333' },
+        error_diagnostic = { fg = '#ED94C0' },
+        warning_diagnostic = { fg = '#C9A26D' },
+      },
     },
   },
 
@@ -176,6 +191,30 @@ return {
     },
   },
 
+  -- GitHub Copilot: inline ghost-text suggestions, separate from blink.cmp's
+  -- LSP/snippet/buffer completion menu.
+  --
+  -- Accept is <C-y>, not the default <M-l>: macOS terminals don't send
+  -- Option as a Meta/Alt modifier by default (Option+L types a literal
+  -- character, e.g. ¬ on a US layout), so <M-...> keymaps silently never
+  -- fire unless the terminal app is reconfigured to send Option as Esc+.
+  -- A Ctrl combo sidesteps that entirely.
+  {
+    'zbirenbaum/copilot.lua',
+    cmd = 'Copilot',
+    event = 'InsertEnter',
+    opts = {
+      suggestion = {
+        auto_trigger = true,
+        keymap = {
+          accept = '<C-y>',
+          next = '<C-n>',
+          prev = '<C-p>',
+        },
+      },
+    },
+  },
+
   -- Syntax-highlighted completion labels (e.g. function signatures keep
   -- their normal token colors instead of being one flat color) for blink.cmp
   { 'xzbdmw/colorful-menu.nvim', opts = {} },
@@ -310,8 +349,34 @@ return {
           map('K', vim.lsp.buf.hover, 'Hover Documentation')
           map('<leader>rn', vim.lsp.buf.rename, 'Rename')
           map('<leader>ca', vim.lsp.buf.code_action, 'Code Action')
+          map('<leader>th', function()
+            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = ev.buf }, { bufnr = ev.buf })
+          end, 'Toggle Inlay Hints')
+
+          local client = vim.lsp.get_client_by_id(ev.data.client_id)
+          if client and client:supports_method('textDocument/inlayHint', ev.buf) then
+            vim.lsp.inlay_hint.enable(true, { bufnr = ev.buf })
+          end
         end,
       })
+
+      vim.api.nvim_create_user_command('LspInlayHintsInfo', function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local clients = vim.lsp.get_clients { bufnr = bufnr }
+        local lines = {
+          ('inlay hints enabled: %s'):format(vim.lsp.inlay_hint.is_enabled { bufnr = bufnr }),
+          ('visible hints cached: %d'):format(#vim.lsp.inlay_hint.get { bufnr = bufnr }),
+        }
+
+        for _, client in ipairs(clients) do
+          lines[#lines + 1] = ('%s supports inlayHint: %s'):format(
+            client.name,
+            client:supports_method('textDocument/inlayHint', bufnr)
+          )
+        end
+
+        vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO, { title = 'LSP Inlay Hints' })
+      end, { desc = 'Show inlay hint status for the current buffer' })
     end,
   },
 
@@ -319,6 +384,34 @@ return {
   {
     'seblyng/roslyn.nvim',
     ft = 'cs',
+    -- Server-specific settings (e.g. inlay hints) go through vim.lsp.config,
+    -- not the plugin's own `opts` table — RoslynNvimConfig (opts) only
+    -- covers filewatching/target-selection, it has no `settings` field.
+    --
+    -- This MUST run in `init`, not `config`: roslyn.nvim's plugin/roslyn.lua
+    -- calls vim.lsp.enable('roslyn') as soon as the plugin is loaded, which
+    -- starts the client using whatever vim.lsp.config('roslyn', ...) holds
+    -- at that moment. lazy.nvim sources plugin/ files (and thus fires that
+    -- vim.lsp.enable call) before running `config`, so settings set there
+    -- arrive too late — the client already started without them. `init`
+    -- runs before the plugin itself is loaded, so it's early enough.
+    init = function()
+      vim.lsp.config('roslyn', {
+        settings = {
+          ['csharp|inlay_hints'] = {
+            csharp_enable_inlay_hints_for_types = true,
+            csharp_enable_inlay_hints_for_implicit_object_creation = true,
+            csharp_enable_inlay_hints_for_implicit_variable_types = true,
+            csharp_enable_inlay_hints_for_lambda_parameter_types = true,
+            dotnet_enable_inlay_hints_for_parameters = true,
+            dotnet_enable_inlay_hints_for_literal_parameters = true,
+            dotnet_enable_inlay_hints_for_indexer_parameters = true,
+            dotnet_enable_inlay_hints_for_object_creation_parameters = true,
+            dotnet_enable_inlay_hints_for_other_parameters = true,
+          },
+        },
+      })
+    end,
     opts = {},
   },
 
