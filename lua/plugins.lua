@@ -177,7 +177,14 @@ return {
     opts = {},
   },
 
-  -- Preview Markdown (incl. Mermaid diagrams) in the browser, synced live
+  -- Preview Markdown (incl. Mermaid diagrams), synced live. iterm-preview.nvim
+  -- intercepts markdown-preview.nvim's browser handoff and renders it in an
+  -- iTerm2 split instead of an external browser tab.
+  --
+  -- One-time manual setup required: iTerm2 > Settings > Profiles > + a new
+  -- profile with "General > Command" set to a URL/Browser profile, initial
+  -- URL `file:///tmp/iterm-preview.html`. Without that profile this silently
+  -- does nothing.
   {
     'iamcco/markdown-preview.nvim',
     cmd = { 'MarkdownPreviewToggle', 'MarkdownPreview', 'MarkdownPreviewStop' },
@@ -186,9 +193,12 @@ return {
       vim.g.mkdp_filetypes = { 'markdown' }
     end,
     ft = { 'markdown' },
-    keys = {
-      { '<leader>mp', '<cmd>MarkdownPreviewToggle<CR>', desc = 'Markdown Preview' },
-    },
+  },
+  {
+    'Kepler2024/iTerm-preview.nvim',
+    dependencies = { 'iamcco/markdown-preview.nvim' },
+    ft = { 'markdown', 'html' },
+    opts = {},
   },
 
   -- GitHub Copilot: inline ghost-text suggestions, separate from blink.cmp's
@@ -349,7 +359,7 @@ return {
           map('K', vim.lsp.buf.hover, 'Hover Documentation')
           map('<leader>rn', vim.lsp.buf.rename, 'Rename')
           map('<leader>ca', vim.lsp.buf.code_action, 'Code Action')
-          map('<leader>th', function()
+          map('<leader>ih', function()
             vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = ev.buf }, { bufnr = ev.buf })
           end, 'Toggle Inlay Hints')
 

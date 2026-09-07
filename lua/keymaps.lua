@@ -67,3 +67,16 @@ vim.keymap.set('n', '<leader>tv', '<cmd>vsplit | terminal<CR>', { desc = 'Open t
 
 -- Terminal mode: Esc to go back to normal mode
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', opts)
+
+-- Open preview: markdown -> markdown-preview.nvim, html -> iterm-preview.nvim's
+-- generic open_url() pointed at the buffer's own file:// path.
+vim.keymap.set('n', '<leader>op', function()
+  local ft = vim.bo.filetype
+  if ft == 'markdown' then
+    vim.cmd.MarkdownPreviewToggle()
+  elseif ft == 'html' then
+    require('iterm-preview').open_url('file://' .. vim.api.nvim_buf_get_name(0))
+  else
+    vim.notify('No preview available for filetype: ' .. ft, vim.log.levels.WARN)
+  end
+end, { desc = 'Open preview (md/html)' })
