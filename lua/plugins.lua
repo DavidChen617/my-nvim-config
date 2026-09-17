@@ -354,7 +354,26 @@ return {
           local map = function(keys, fn, desc)
             vim.keymap.set('n', keys, fn, { buffer = ev.buf, desc = 'LSP: ' .. desc })
           end
-          map('gd', require('telescope.builtin').lsp_definitions, 'Goto Definition')
+          map('gd', function()
+            -- On a `cs` buffer, roslyn sometimes fails to auto-attach (e.g.
+            -- a file outside the resolved solution/target). When that
+            -- happens the only client left attached is one that doesn't
+            -- support go-to-definition (e.g. copilot), and telescope's
+            -- picker just fails with "server does not support
+            -- textDocument/definition" with no hint about why.
+            if
+              vim.bo[ev.buf].filetype == 'cs'
+              and #vim.lsp.get_clients { bufnr = ev.buf, method = 'textDocument/definition' } == 0
+            then
+              vim.notify(
+                'No attached LSP client supports go-to-definition here.\nRun :Roslyn target to pick the solution for this buffer.',
+                vim.log.levels.WARN,
+                { title = 'roslyn.nvim' }
+              )
+              return
+            end
+            require('telescope.builtin').lsp_definitions()
+          end, 'Goto Definition')
           map('gr', require('telescope.builtin').lsp_references, 'Goto References')
           map('gi', require('telescope.builtin').lsp_implementations, 'Goto Implementation')
           map('K', vim.lsp.buf.hover, 'Hover Documentation')
@@ -367,6 +386,64 @@ return {
           local client = vim.lsp.get_client_by_id(ev.data.client_id)
           if client and client:supports_method('textDocument/inlayHint', ev.buf) then
             vim.lsp.inlay_hint.enable(true, { bufnr = ev.buf })
+          end
+          if client and client.name == 'roslyn' then
+            map('<leader>rt', '<cmd>Roslyn target<cr>', 'Select Roslyn Target')
+
+            -- Roslyn's diagnostics are pull-based and, per the roslyn.nvim
+            -- author, "a bit of a hack" that doesn't always refresh on its
+            -- own (https://github.com/seblyng/roslyn.nvim/wiki). Without
+            -- this, diagnostics look stale until something forces a pull —
+            -- e.g. `:Roslyn target`, which actually restarts the whole LSP
+            -- client. Pull explicitly on BufEnter instead, so switching
+            -- files updates diagnostics without a full server restart.
+            vim.api.nvim_create_autocmd('BufEnter', {
+              desc = 'Roslyn: pull fresh diagnostics for this buffer.',
+              buffer = ev.buf,
+              callback = function()
+                client:request('textDocument/diagnostic', {
+                  textDocument = vim.lsp.util.make_text_document_params(ev.buf),
+                }, nil, ev.buf)
+              end,
+            })
+
+            -- Typing `///` above a member normally expands into an XML doc
+            -- comment (<summary>, <param>, ...) in Visual Studio / VS Code.
+            -- Neovim's LSP client has no built-in support for this, so wire
+            -- up Roslyn's non-standard `textDocument/_vs_onAutoInsert`
+            -- request by hand, per the roslyn.nvim wiki:
+            -- https://github.com/seblyng/roslyn.nvim/wiki
+            vim.api.nvim_create_autocmd('InsertCharPre', {
+              desc = "Roslyn: trigger XML doc comment auto-insert on '/'.",
+              buffer = ev.buf,
+              callback = function()
+                if vim.v.char ~= '/' then
+                  return
+                end
+
+                local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+                row, col = row - 1, col + 1
+                local params = {
+                  _vs_textDocument = { uri = vim.uri_from_bufnr(ev.buf) },
+                  _vs_position = { line = row, character = col },
+                  _vs_ch = '/',
+                  _vs_options = {
+                    tabSize = vim.bo[ev.buf].tabstop,
+                    insertSpaces = vim.bo[ev.buf].expandtab,
+                  },
+                }
+
+                -- Must be sent after the `/` has actually landed in the buffer.
+                vim.defer_fn(function()
+                  client:request('textDocument/_vs_onAutoInsert', params, function(err, result)
+                    if err or not result then
+                      return
+                    end
+                    vim.snippet.expand(result._vs_textEdit.newText)
+                  end, ev.buf)
+                end, 1)
+              end,
+            })
           end
         end,
       })
@@ -421,6 +498,30 @@ return {
             dotnet_enable_inlay_hints_for_other_parameters = true,
           },
         },
+        -- roslyn.nvim's own root_dir (lsp/roslyn.lua) only reuses the
+        -- current client's root for `roslyn-source-generated://` buffers.
+        -- Decompiled `MetadataAsSource` buffers aren't covered, so without
+        -- a .sln pinning the target, each one resolves to its own rootless
+        -- client and `gd` inside decompiled code fails with "No locations
+        -- found". Extend the same reuse check to MetadataAsSource.
+        -- Depends on roslyn.nvim's internal `roslyn.target` module, so a
+        -- future plugin update could require revisiting this.
+        -- https://github.com/seblyng/roslyn.nvim/issues/116
+        root_dir = function(bufnr, on_dir)
+          if vim.api.nvim_buf_get_name(bufnr):match 'MetadataAsSource' then
+            local existing = vim.lsp.get_clients { name = 'roslyn' }[1]
+            if existing and existing.config.root_dir then
+              on_dir(existing.config.root_dir)
+              return
+            end
+          end
+
+          local target = require 'roslyn.target'
+          local decision = target.resolve(bufnr)
+          target.notify_if_needed(decision)
+          target.remember(decision)
+          on_dir(decision.root_dir)
+        end,
       })
     end,
     opts = {},
