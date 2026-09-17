@@ -12,3 +12,6 @@ Thumbs.db
 # that shouldn't go into a shared dotfiles repo. Doesn't exist yet —
 # create lua/local.lua and `require 'local'` from init.lua if needed.
 lua/local.lua
+
+# Neovim runtime log
+nvim.log
