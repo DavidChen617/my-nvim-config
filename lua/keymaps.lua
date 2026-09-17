@@ -69,6 +69,19 @@ vim.keymap.set('n', '<leader>tv', '<cmd>vsplit | terminal<CR>', { desc = 'Open t
 -- Terminal mode: Esc to go back to normal mode
 vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', opts)
 
+-- Copy current file's path to the system clipboard
+vim.keymap.set('n', '<leader>cp', function()
+  local path = vim.api.nvim_buf_get_name(0)
+  vim.fn.setreg('+', path)
+  vim.notify('Copied: ' .. path)
+end, { desc = 'Copy absolute file path' })
+
+vim.keymap.set('n', '<leader>cP', function()
+  local path = vim.fn.expand '%:.'
+  vim.fn.setreg('+', path)
+  vim.notify('Copied: ' .. path)
+end, { desc = 'Copy relative file path' })
+
 -- Open preview: markdown -> markdown-preview.nvim, html -> iterm-preview.nvim's
 -- generic open_url() pointed at the buffer's own file:// path.
 vim.keymap.set('n', '<leader>op', function()
