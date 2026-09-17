@@ -11,7 +11,7 @@ return {
       options = {
         mode = 'buffers',
         numbers = 'none',
-        close_command = 'bdelete %d',
+        close_command = 'bdelete! %d',
         path_components = 1, -- show file name only, not the full path
         modified_icon = '●',
         always_show_bufferline = true,

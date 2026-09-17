@@ -29,6 +29,7 @@ vim.keymap.set('n', '<Tab>', '<cmd>bnext<CR>', opts)
 vim.keymap.set('n', '<S-Tab>', '<cmd>bprevious<CR>', opts)
 vim.keymap.set('n', '<leader>x', '<cmd>bdelete!<CR>', { desc = 'Close buffer' })
 vim.keymap.set('n', '<leader>b', '<cmd>enew<CR>', { desc = 'New buffer' })
+vim.keymap.set('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', { desc = 'Close other buffers' })
 
 -- Window management
 vim.keymap.set('n', '<leader>v', '<C-w>v', { desc = 'Split window vertically' })
