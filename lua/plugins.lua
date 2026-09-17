@@ -90,6 +90,7 @@ return {
       'nvim-lua/plenary.nvim',
       'nvim-tree/nvim-web-devicons',
       'MunifTanjim/nui.nvim',
+      's1n7ax/nvim-window-picker', -- required for neo-tree's `w` (open with window picker)
     },
     keys = {
       { '<leader>e', '<cmd>Neotree toggle<CR>', desc = 'Toggle file explorer' },
