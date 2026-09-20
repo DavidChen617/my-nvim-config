@@ -7,8 +7,8 @@ vim.o.mouse = 'a'
 vim.o.cursorline = true
 vim.o.scrolloff = 8
 
-vim.opt.tabstop = 2
-vim.opt.shiftwidth = 2
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 
 vim.opt.ignorecase = true
