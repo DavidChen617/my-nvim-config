@@ -38,3 +38,23 @@ vim.o.foldlevelstart = 99
 -- of the X11 PRIMARY selection.
 local platform = require 'platform'
 vim.opt.clipboard = platform.is_linux and 'unnamedplus' or 'unnamed'
+
+-- Over SSH there's no X11/Wayland selection to hit, so `unnamedplus` alone
+-- does nothing without a local clipboard tool (xclip/wl-copy) *and* a
+-- forwarded display. OSC 52 sidesteps that entirely by asking the terminal
+-- itself to set its clipboard, the same trick as a shell `pbcopy` wrapper
+-- that prints `\033]52;c;<base64>\a`, except Neovim ships this provider
+-- built in (`:h clipboard-osc52`).
+if platform.is_linux and vim.env.SSH_TTY then
+  vim.g.clipboard = {
+    name = 'OSC 52',
+    copy = {
+      ['+'] = require('vim.ui.clipboard.osc52').copy '+',
+      ['*'] = require('vim.ui.clipboard.osc52').copy '*',
+    },
+    paste = {
+      ['+'] = require('vim.ui.clipboard.osc52').paste '+',
+      ['*'] = require('vim.ui.clipboard.osc52').paste '*',
+    },
+  }
+end
