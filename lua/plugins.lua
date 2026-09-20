@@ -132,6 +132,8 @@ return {
         'vim',
         'vimdoc',
         'dockerfile',
+        'terraform',
+        'hcl',
       }
       local filetypes = {
         'c',
@@ -151,6 +153,9 @@ return {
         'vim',
         'help',
         'dockerfile',
+        'terraform',
+        'terraform-vars',
+        'hcl',
       }
 
       require('nvim-treesitter').setup {
@@ -158,11 +163,19 @@ return {
       }
       require('nvim-treesitter').install(parsers)
 
+      -- c_sharp's grammar ships no indents.scm, so treesitter's indentexpr
+      -- can't compute anything for it (new lines land at column 1). Keep
+      -- treesitter highlighting for 'cs' but leave indentation to Neovim's
+      -- built-in indent/cs.vim (cindent-based, actually works).
+      local no_treesitter_indent = { cs = true }
+
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
-        callback = function()
+        callback = function(ev)
           vim.treesitter.start()
-          vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          if not no_treesitter_indent[ev.match] then
+            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
         end,
       })
     end,
@@ -305,6 +318,7 @@ return {
       },
       'mason-org/mason-lspconfig.nvim',
       'saghen/blink.cmp',
+      'b0o/schemastore.nvim', -- JSON/YAML schemas for yamlls/jsonls (e.g. k8s manifests, docker-compose)
     },
     config = function()
       -- Give every LSP server the extra capabilities blink.cmp provides
@@ -315,14 +329,29 @@ return {
       -- Servers we want installed + enabled.
       -- Empty {} means "use nvim-lspconfig's defaults, no overrides".
       local servers = {
-        clangd = {},      -- C
-        bashls = {},      -- sh
-        yamlls = {},      -- YAML
-        ts_ls = {},       -- JS/TS
-        sqlls = {},       -- SQL / PostgreSQL
-        marksman = {},    -- Markdown
-        dockerls = {},    -- Dockerfile
-        jsonls = {},      -- JSON (e.g. appsettings.json)
+        clangd = {}, -- C
+        bashls = {}, -- sh
+        -- schemaStore.enable = false + url = '' turns off yaml-language-server's
+        -- own schema-store fetching so schemastore.nvim's list (kept up to date
+        -- via its own releases) is the only source, not both at once.
+        yamlls = {
+          settings = {
+            yaml = {
+              schemaStore = { enable = false, url = '' },
+              schemas = require('schemastore').yaml.schemas(),
+            },
+          },
+        },
+        ts_ls = {}, -- JS/TS
+        -- Angular template/component support (attaches alongside ts_ls in
+        -- Angular projects; only activates where angular.json/nx.json is
+        -- found, and needs `ngserver` installed via mason).
+        angularls = {},
+        sqlls = {}, -- SQL / PostgreSQL
+        marksman = {}, -- Markdown
+        dockerls = {}, -- Dockerfile
+        jsonls = {}, -- JSON (e.g. appsettings.json)
+        terraformls = {}, -- Terraform / HCL
         lua_ls = {
           settings = {
             Lua = {

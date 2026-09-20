@@ -1,6 +1,27 @@
 require 'options'
 require 'keymaps'
 
+-- Neovim's built-in `.tf` detection is content-based (vim.filetype.detect.tf):
+-- it falls back to the legacy Tcl-style `tf` filetype whenever every
+-- non-blank line in the buffer starts with `;` or `/` (e.g. a file that's
+-- all `//` comments), instead of `terraform`. Force it by extension so
+-- terraformls/treesitter always attach regardless of file content.
+vim.filetype.add {
+  extension = {
+    tf = 'terraform',
+    tfvars = 'terraform-vars',
+  },
+}
+
+-- Briefly highlight the yanked text so a copy/delete gives visual feedback.
+vim.api.nvim_create_autocmd('TextYankPost', {
+  desc = 'Highlight yanked text',
+  group = vim.api.nvim_create_augroup('highlight-yank', { clear = true }),
+  callback = function()
+    vim.highlight.on_yank()
+  end,
+})
+
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local out = vim.fn.system {
