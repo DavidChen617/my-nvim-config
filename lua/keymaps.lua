@@ -62,6 +62,15 @@ end, { desc = 'Go to next diagnostic' })
 vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float, { desc = 'Show line diagnostics' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
 
+-- Dump :messages into a scratch split so it can be navigated/searched/yanked
+-- (the default more-prompt can't be focused). nofile + wipe: closes with :q.
+vim.keymap.set('n', '<leader>m', function()
+  vim.cmd 'new'
+  vim.bo.buftype = 'nofile'
+  vim.bo.bufhidden = 'wipe'
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(vim.fn.execute 'messages', '\n', { trimempty = true }))
+end, { desc = 'Show :messages in a scratch buffer' })
+
 -- Open terminal in a split (keeps it from taking over the only window)
 vim.keymap.set('n', '<leader>th', '<cmd>split | terminal<CR>', { desc = 'Open terminal (horizontal split)' })
 vim.keymap.set('n', '<leader>tv', '<cmd>vsplit | terminal<CR>', { desc = 'Open terminal (vertical split)' })
