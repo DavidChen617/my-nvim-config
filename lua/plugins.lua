@@ -1,3 +1,28 @@
+-- blink.cmp keymap entries for scrolling the completion-item doc window.
+-- blink.cmp doesn't expose a command for scrolling the signature help
+-- (overload) window, so scroll that one directly when it's open, falling
+-- back to the doc window otherwise.
+local scroll_down = {
+  function()
+    if require('blink.cmp').is_signature_visible() then
+      require('blink.cmp.signature.window').scroll_down(4)
+      return true
+    end
+  end,
+  'scroll_documentation_down',
+  'fallback',
+}
+local scroll_up = {
+  function()
+    if require('blink.cmp').is_signature_visible() then
+      require('blink.cmp.signature.window').scroll_up(4)
+      return true
+    end
+  end,
+  'scroll_documentation_up',
+  'fallback',
+}
+
 return {
   -- Statusline
   { 'nvim-lualine/lualine.nvim', opts = {} },
@@ -71,6 +96,40 @@ return {
     'nvim-telescope/telescope.nvim',
     dependencies = { 'nvim-lua/plenary.nvim' },
     cmd = 'Telescope',
+    opts = {
+      defaults = {
+        -- Stack preview on top of results/prompt instead of side by side.
+        layout_strategy = 'vertical',
+        -- preview_cutoff defaults to 40 lines; below that the preview is hidden.
+        layout_config = { vertical = { preview_height = 0.5, preview_cutoff = 1 } },
+        -- Scroll the preview pane with Shift+arrows (Ctrl+arrows
+        -- are grabbed by macOS; <C-r> is needed for pasting registers).
+        mappings = {
+          i = {
+            ['<S-Down>'] = 'preview_scrolling_down',
+            ['<S-Up>'] = 'preview_scrolling_up',
+            ['<S-Left>'] = 'preview_scrolling_left',
+            ['<S-Right>'] = 'preview_scrolling_right',
+            -- Telescope's defaults for the same job; unbind so there's one way.
+            ['<C-d>'] = false,
+            ['<C-u>'] = false,
+            ['<C-f>'] = false,
+            ['<C-k>'] = false,
+          },
+          n = {
+            ['<S-Down>'] = 'preview_scrolling_down',
+            ['<S-Up>'] = 'preview_scrolling_up',
+            ['<S-Left>'] = 'preview_scrolling_left',
+            ['<S-Right>'] = 'preview_scrolling_right',
+            -- Telescope's defaults for the same job; unbind so there's one way.
+            ['<C-d>'] = false,
+            ['<C-u>'] = false,
+            ['<C-f>'] = false,
+            ['<C-k>'] = false,
+          },
+        },
+      },
+    },
     keys = {
       { '<leader>sf', '<cmd>Telescope find_files<CR>', desc = 'Search Files' },
       { '<leader>sg', '<cmd>Telescope live_grep<CR>', desc = 'Search by Grep' },
@@ -134,6 +193,7 @@ return {
         'dockerfile',
         'terraform',
         'hcl',
+        'make',
       }
       local filetypes = {
         'c',
@@ -156,6 +216,7 @@ return {
         'terraform',
         'terraform-vars',
         'hcl',
+        'make',
       }
 
       require('nvim-treesitter').setup {
@@ -251,30 +312,12 @@ return {
     opts = {
       keymap = {
         preset = 'enter',
-        -- The 'enter' preset's scroll_documentation_* only scrolls the
-        -- completion-item doc window; blink.cmp doesn't expose a command
-        -- for scrolling the signature help (overload) window, so scroll
-        -- that one directly when it's open, falling back otherwise.
-        ['<C-f>'] = {
-          function()
-            if require('blink.cmp').is_signature_visible() then
-              require('blink.cmp.signature.window').scroll_down(4)
-              return true
-            end
-          end,
-          'scroll_documentation_down',
-          'fallback',
-        },
-        ['<C-b>'] = {
-          function()
-            if require('blink.cmp').is_signature_visible() then
-              require('blink.cmp.signature.window').scroll_up(4)
-              return true
-            end
-          end,
-          'scroll_documentation_up',
-          'fallback',
-        },
+        -- Shift+Up/Down scroll the doc/signature window; these
+        -- replace the preset's <C-f>/<C-b>, so unbind those.
+        ['<C-f>'] = false,
+        ['<C-b>'] = false,
+        ['<S-Down>'] = scroll_down,
+        ['<S-Up>'] = scroll_up,
       },
       appearance = { nerd_font_variant = 'mono' },
       completion = {
@@ -352,6 +395,11 @@ return {
         dockerls = {}, -- Dockerfile
         jsonls = {}, -- JSON (e.g. appsettings.json)
         terraformls = {}, -- Terraform / HCL
+        -- Neovim's builtin filetype detection tags Angular component
+        -- templates as `htmlangular` (not `html`), so the default
+        -- filetypes list never matches those buffers without this override.
+        html = { filetypes = { 'html', 'htmlangular' } }, -- HTML
+        cssls = {}, -- CSS
         lua_ls = {
           settings = {
             Lua = {
@@ -413,8 +461,8 @@ return {
           end, 'Toggle Inlay Hints')
 
           local client = vim.lsp.get_client_by_id(ev.data.client_id)
-          if client and client:supports_method('textDocument/inlayHint', ev.buf) then
-            vim.lsp.inlay_hint.enable(true, { bufnr = ev.buf })
+          if client and client:supports_method('textDocument/codeLens', ev.buf) then
+            vim.lsp.codelens.enable(true, { bufnr = ev.buf })
           end
           if client and client.name == 'roslyn' then
             map('<leader>rt', '<cmd>Roslyn target<cr>', 'Select Roslyn Target')
@@ -424,9 +472,10 @@ return {
             -- own (https://github.com/seblyng/roslyn.nvim/wiki). Without
             -- this, diagnostics look stale until something forces a pull —
             -- e.g. `:Roslyn target`, which actually restarts the whole LSP
-            -- client. Pull explicitly on BufEnter instead, so switching
-            -- files updates diagnostics without a full server restart.
-            vim.api.nvim_create_autocmd('BufEnter', {
+            -- client. Pull explicitly on save / leaving insert mode (same
+            -- events nvim-lspconfig's roslyn_ls uses) rather than on every
+            -- BufEnter, which forced a full recompute on each buffer switch.
+            vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
               desc = 'Roslyn: pull fresh diagnostics for this buffer.',
               buffer = ev.buf,
               callback = function()
@@ -526,6 +575,18 @@ return {
             dotnet_enable_inlay_hints_for_object_creation_parameters = true,
             dotnet_enable_inlay_hints_for_other_parameters = true,
           },
+          -- Shows "N references" / "Run Test | Debug Test" above members,
+          -- like VS/VS Code. Neovim still has to be told to display it —
+          -- see the codelens.enable() call in the LspAttach autocmd below.
+          ['csharp|code_lens'] = {
+            dotnet_enable_references_code_lens = true,
+            dotnet_enable_tests_code_lens = false,
+          },
+          -- Only analyze open files instead of the whole solution.
+          ['csharp|background_analysis'] = {
+            dotnet_analyzer_diagnostics_scope = 'openFiles',
+            dotnet_compiler_diagnostics_scope = 'openFiles',
+          },
         },
         -- roslyn.nvim's own root_dir (lsp/roslyn.lua) only reuses the
         -- current client's root for `roslyn-source-generated://` buffers.
@@ -553,7 +614,11 @@ return {
         end,
       })
     end,
-    opts = {},
+    opts = {
+      -- Let Roslyn do its own file watching instead of Neovim's, which the
+      -- README suggests when you notice performance issues.
+      filewatching = 'roslyn',
+    },
   },
 
   -- Formatting on save
