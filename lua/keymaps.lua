@@ -33,7 +33,8 @@ vim.keymap.set('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', { desc = 'Cl
 
 -- Window management
 vim.keymap.set('n', '<leader>v', '<C-w>v', { desc = 'Split window vertically' })
-vim.keymap.set('n', '<leader>h', '<C-w>s', { desc = 'Split window horizontally' })
+-- Not <leader>h: that prefix belongs to gitsigns' hunk maps (<leader>hs/hr/hp/hb)
+vim.keymap.set('n', '<leader>-', '<C-w>s',{ desc = 'Split window horizontally' })
 vim.keymap.set('n', '<leader>se', '<C-w>=', { desc = 'Equalize split sizes' })
 vim.keymap.set('n', '<leader>xs', '<cmd>close<CR>', { desc = 'Close current split' })
 
