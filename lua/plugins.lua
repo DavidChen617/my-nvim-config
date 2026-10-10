@@ -365,8 +365,15 @@ return {
     },
     config = function()
       -- Give every LSP server the extra capabilities blink.cmp provides
+      -- didChangeWatchedFiles is turned off for every client: Neovim's
+      -- built-in watcher opens one fd per watched directory and hits EMFILE
+      -- on huge repos (e.g. aspnetcore). Trade-off: servers won't notice
+      -- external changes (git checkout, etc.) until restarted. roslyn does
+      -- its own watching (filewatching = 'roslyn' below), so C# is unaffected.
       vim.lsp.config('*', {
-        capabilities = require('blink.cmp').get_lsp_capabilities(),
+        capabilities = vim.tbl_deep_extend('force', require('blink.cmp').get_lsp_capabilities(), {
+          workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
+        }),
       })
 
       -- Servers we want installed + enabled.
