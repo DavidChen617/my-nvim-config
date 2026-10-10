@@ -407,6 +407,9 @@ return {
         -- filetypes list never matches those buffers without this override.
         html = { filetypes = { 'html', 'htmlangular' } }, -- HTML
         cssls = {}, -- CSS
+        -- Spell-check for code (knows camelCase/snake_case); known-typo list,
+        -- so far fewer false positives than vim's built-in 'spell'.
+        typos_lsp = {},
         lua_ls = {
           settings = {
             Lua = {
