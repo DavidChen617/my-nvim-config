@@ -10,14 +10,16 @@ SUDO=""
 # build tools: treesitter parsers are compiled locally
 # node/npm: Mason LSP servers, tree-sitter-cli, markdown-preview build
 # ripgrep/fd: Telescope live_grep / find_files
+# python3-venv/pip: Mason installs pip-based servers (autotools-language-server)
+#   into venvs; Debian/Ubuntu split ensurepip out of the base python3 package
 # xclip/wl-clipboard: system clipboard (unnamedplus)
 if command -v apt-get >/dev/null; then
   $SUDO apt-get update -qq
-  $SUDO apt-get install -y curl git unzip tar gcc g++ make nodejs npm ripgrep fd-find xclip wl-clipboard
+  $SUDO apt-get install -y curl git unzip tar gcc g++ make nodejs npm python3 python3-venv python3-pip ripgrep fd-find xclip wl-clipboard
 elif command -v dnf >/dev/null; then
-  $SUDO dnf install -y curl git unzip tar gcc gcc-c++ make nodejs npm ripgrep fd-find xclip wl-clipboard
+  $SUDO dnf install -y curl git unzip tar gcc gcc-c++ make nodejs npm python3 python3-pip ripgrep fd-find xclip wl-clipboard
 elif command -v pacman >/dev/null; then
-  $SUDO pacman -Sy --needed --noconfirm curl git unzip tar gcc make nodejs npm ripgrep fd xclip wl-clipboard
+  $SUDO pacman -Sy --needed --noconfirm curl git unzip tar gcc make nodejs npm python python-pip ripgrep fd xclip wl-clipboard
 else
   echo "Unsupported package manager: install curl git unzip gcc make nodejs npm ripgrep manually." >&2
   exit 1
