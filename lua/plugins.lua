@@ -194,6 +194,10 @@ return {
         'terraform',
         'hcl',
         'make',
+        'go',
+        'gomod',
+        'gosum',
+        'gowork',
       }
       local filetypes = {
         'c',
@@ -217,6 +221,10 @@ return {
         'terraform-vars',
         'hcl',
         'make',
+        'go',
+        'gomod',
+        'gosum',
+        'gowork',
       }
 
       require('nvim-treesitter').setup {
@@ -407,6 +415,14 @@ return {
         -- filetypes list never matches those buffers without this override.
         html = { filetypes = { 'html', 'htmlangular' } }, -- HTML
         cssls = {}, -- CSS
+        gopls = { -- Go
+          settings = {
+            gopls = {
+              staticcheck = true,
+              gofumpt = true,
+            },
+          },
+        },
         -- Spell-check for code (knows camelCase/snake_case); known-typo list,
         -- so far fewer false positives than vim's built-in 'spell'.
         typos_lsp = {},
@@ -471,6 +487,26 @@ return {
           end, 'Toggle Inlay Hints')
 
           local client = vim.lsp.get_client_by_id(ev.data.client_id)
+          if client and client.name == 'gopls' then
+            -- gopls formats via conform's lsp fallback, but doesn't fix
+            -- imports on its own; ask for organizeImports first (runs before
+            -- conform's own BufWritePre save hook, which is registered later).
+            -- https://go.dev/gopls/editor/vim
+            vim.api.nvim_create_autocmd('BufWritePre', {
+              desc = 'gopls: organize imports on save',
+              buffer = ev.buf,
+              callback = function()
+                local params = vim.lsp.util.make_range_params(0, client.offset_encoding)
+                params.context = { only = { 'source.organizeImports' } }
+                local res = client:request_sync('textDocument/codeAction', params, 1000, ev.buf)
+                for _, action in pairs(res and res.result or {}) do
+                  if action.edit then
+                    vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+                  end
+                end
+              end,
+            })
+          end
           if client and client:supports_method('textDocument/codeLens', ev.buf) then
             vim.lsp.codelens.enable(true, { bufnr = ev.buf })
           end
@@ -684,7 +720,7 @@ return {
       -- macOS this is left out here and installed manually instead (see
       -- netcoredbg_path below). Linux has a proper native mason build.
       require('mason-nvim-dap').setup {
-        ensure_installed = platform.is_linux and { 'netcoredbg' } or {},
+        ensure_installed = platform.is_linux and { 'netcoredbg', 'delve' } or { 'delve' },
         automatic_installation = true,
       }
 
@@ -736,6 +772,21 @@ return {
           request = 'attach',
           processId = require('dap.utils').pick_process,
         },
+      }
+
+      -- Go: debug via delve's DAP server (installed by mason, see ensure_installed above)
+      dap.adapters.delve = {
+        type = 'server',
+        port = '${port}',
+        executable = {
+          command = vim.fn.stdpath 'data' .. '/mason/bin/dlv',
+          args = { 'dap', '-l', '127.0.0.1:${port}' },
+        },
+      }
+      dap.configurations.go = {
+        { type = 'delve', name = 'Debug file', request = 'launch', program = '${file}' },
+        { type = 'delve', name = 'Debug package', request = 'launch', program = '${fileDirname}' },
+        { type = 'delve', name = 'Debug test (package)', request = 'launch', mode = 'test', program = '${fileDirname}' },
       }
 
       vim.fn.sign_define('DapBreakpoint', { text = '●', texthl = 'DapBreakpoint' })
