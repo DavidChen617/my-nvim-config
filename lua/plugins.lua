@@ -410,7 +410,6 @@ return {
         -- Spell-check for code (knows camelCase/snake_case); known-typo list,
         -- so far fewer false positives than vim's built-in 'spell'.
         typos_lsp = {},
-        autotools_ls = {}, -- Makefile / autoconf / automake
         lua_ls = {
           settings = {
             Lua = {
