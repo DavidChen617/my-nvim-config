@@ -894,6 +894,73 @@ return {
         { type = 'delve', name = 'Debug test (package)', request = 'launch', mode = 'test', program = '${fileDirname}' },
       }
 
+      -- C/C++: gdb >= 14 speaks DAP natively (`gdb -i dap`), no extra adapter needed
+      -- Built per session (adapter as a function) so a glibc source tree
+      -- installed after nvim started is picked up without a restart.
+      dap.adapters.gdb = function(callback)
+        local args = { '--interpreter=dap', '--eval-command', 'set print pretty on' }
+        local function add(cmd)
+          vim.list_extend(args, { '--eval-command', cmd })
+        end
+
+        -- glibc's debug info (libc6-dbg / debuginfod) points at relative paths
+        -- like ./signal/../sysdeps/posix/signal.c. With the matching source
+        -- tree (scripts/install-linux.sh fetches it) step-into on printf etc.
+        -- shows real glibc code; without it, drop glibc's debug info so gdb
+        -- steps over those calls instead of landing in unopenable files.
+        local glibc_ver = vim.trim(vim.fn.system { 'getconf', 'GNU_LIBC_VERSION' }):match '^glibc (%S+)$'
+        local glibc_src = glibc_ver and (vim.fn.stdpath 'data' .. '/glibc-src/glibc-' .. glibc_ver)
+        if glibc_src and vim.fn.isdirectory(glibc_src) == 1 then
+          add('directory ' .. glibc_src)
+        else
+          add 'set debuginfod enabled off'
+          add 'set debug-file-directory'
+        end
+
+        callback { type = 'executable', command = 'gdb', args = args }
+      end
+      dap.configurations.c = {
+        {
+          type = 'gdb',
+          name = 'Build & debug current file',
+          request = 'launch',
+          -- compile the current file with debug info first, so breakpoints
+          -- map to source lines (a binary built without -g has no line info)
+          program = function()
+            local src = vim.fn.expand '%:p'
+            local out = vim.fn.expand '%:p:r'
+            local result = vim.system({ 'gcc', '-g', '-O0', '-Wall', '-o', out, src }, { text = true }):wait()
+            if result.code ~= 0 then
+              vim.notify(result.stderr, vim.log.levels.ERROR)
+              return require('dap').ABORT
+            end
+            return out
+          end,
+          cwd = '${fileDirname}',
+          -- gdb (<= 15) starts the inferior on `launch`, before nvim-dap has
+          -- sent the breakpoints, so early breakpoints in main get skipped.
+          -- Pausing at main's entry gives them time to land; F5 to continue.
+          stopAtBeginningOfMainSubprogram = true,
+        },
+        {
+          type = 'gdb',
+          name = 'Debug executable',
+          request = 'launch',
+          program = function()
+            return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+          end,
+          cwd = '${workspaceFolder}',
+          stopAtBeginningOfMainSubprogram = true,
+        },
+        {
+          type = 'gdb',
+          name = 'Attach to process',
+          request = 'attach',
+          pid = require('dap.utils').pick_process,
+        },
+      }
+      dap.configurations.cpp = dap.configurations.c
+
       vim.fn.sign_define('DapBreakpoint', { text = '●', texthl = 'DapBreakpoint' })
       vim.fn.sign_define('DapStopped', { text = '▶', texthl = 'DapStopped', linehl = 'DapStoppedLine' })
 
