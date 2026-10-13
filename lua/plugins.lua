@@ -793,6 +793,43 @@ return {
       }
 
       dapui.setup()
+
+      -- Where to show the source when stopping/stepping. The default
+      -- ('uselast') falls back to the previous window when focus is in a
+      -- dap-ui panel; if that one is a panel too (e.g. moved Stacks ->
+      -- Scopes), the panel refuses the buffer and every step warns
+      -- "Invalid cursor line: out of range". Only ever use real file
+      -- windows: one already showing the buffer, else the current/last one.
+      dap.defaults.fallback.switchbuf = function(bufnr, line, column)
+        local function is_code_win(win)
+          local buf = vim.api.nvim_win_get_buf(win)
+          return vim.api.nvim_win_get_config(win).relative == '' and vim.bo[buf].buftype == ''
+        end
+        local target
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+          if vim.api.nvim_win_get_buf(win) == bufnr then
+            target = win
+            break
+          end
+        end
+        if not target then
+          local cur, prev = vim.api.nvim_get_current_win(), vim.fn.win_getid(vim.fn.winnr '#')
+          for _, win in ipairs { cur, prev, unpack(vim.api.nvim_tabpage_list_wins(0)) } do
+            if win ~= 0 and is_code_win(win) then
+              target = win
+              break
+            end
+          end
+        end
+        if not target then
+          vim.cmd 'botright split'
+          target = vim.api.nvim_get_current_win()
+        end
+        vim.api.nvim_win_set_buf(target, bufnr)
+        vim.api.nvim_win_set_cursor(target, { line, math.max(column - 1, 0) })
+        vim.api.nvim_set_current_win(target)
+        vim.cmd 'normal! zv'
+      end
       dap.listeners.before.attach.dapui_config = function()
         dapui.open()
       end
