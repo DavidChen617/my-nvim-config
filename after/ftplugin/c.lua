@@ -6,3 +6,5 @@ vim.bo.expandtab = false
 vim.bo.tabstop = 4
 vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 0
+-- :Man / K-in-man-buffers: prefer section 3 (libc) then 2 (syscalls) in C
+vim.b.man_default_sects = '3,2'

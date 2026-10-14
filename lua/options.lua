@@ -24,6 +24,9 @@ vim.opt.splitbelow = true
 vim.opt.undofile = true
 vim.opt.termguicolors = true
 
+-- :Man (ft-man-plugin): fold manpages by section (foldmethod=indent, nest 1)
+vim.g.ft_man_folding_enable = 1
+
 -- Rounded borders on all floating windows (hover, signature, completion menu, etc.)
 vim.opt.winborder = 'rounded'
 

@@ -137,6 +137,7 @@ return {
       { '<leader>sh', '<cmd>Telescope help_tags<CR>', desc = 'Search Help' },
       { '<leader>sd', '<cmd>Telescope diagnostics<CR>', desc = 'Search Diagnostics' },
       { '<leader>sk', '<cmd>Telescope keymaps<CR>', desc = 'Search Keymaps' },
+      { '<leader>sm', '<cmd>Telescope man_pages<CR>', desc = 'Search Man pages' },
     },
   },
 
@@ -198,8 +199,8 @@ return {
         'gomod',
         'gosum',
         'gowork',
-      }
         'nginx',
+      }
       local filetypes = {
         'c',
         'cs',
@@ -226,8 +227,8 @@ return {
         'gomod',
         'gosum',
         'gowork',
-      }
         'nginx',
+      }
 
       require('nvim-treesitter').setup {
         install_dir = vim.fn.stdpath 'data' .. '/site',
@@ -417,8 +418,8 @@ return {
         -- filetypes list never matches those buffers without this override.
         html = { filetypes = { 'html', 'htmlangular' } }, -- HTML
         cssls = {}, -- CSS
-        gopls = { -- Go
         nginx_language_server = {}, -- nginx.conf
+        gopls = { -- Go
           settings = {
             gopls = {
               staticcheck = true,
@@ -693,8 +694,8 @@ return {
         json = { 'prettier' },
         yaml = { 'prettier' },
         markdown = { 'prettier' },
-      },
         nginx = { 'nginxfmt' }, -- needs `:MasonInstall nginx-config-formatter`
+      },
       -- No formatter registered for 'cs': lsp_format = 'fallback' below makes
       -- conform hand C# off to the buffer's LSP client (roslyn.nvim's Roslyn
       -- Language Server), both for <leader>f and on save.
