@@ -10,8 +10,20 @@ vim.filetype.add {
   extension = {
     tf = 'terraform',
     tfvars = 'terraform-vars',
+    -- MSBuild project files: a dedicated filetype lets msbuild_project_tools_server
+    -- attach to them (built-in detection makes *.csproj/*.props plain `xml`
+    -- and leaves *.targets undetected).
+    props = 'msbuild',
+    targets = 'msbuild',
+    tasks = 'msbuild',
+    csproj = 'msbuild',
+    fsproj = 'msbuild',
+    vbproj = 'msbuild',
+    proj = 'msbuild',
   },
 }
+-- highlight `msbuild` buffers with the xml treesitter parser
+vim.treesitter.language.register('xml', { 'msbuild' })
 
 -- Briefly highlight the yanked text so a copy/delete gives visual feedback.
 vim.api.nvim_create_autocmd('TextYankPost', {

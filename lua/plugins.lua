@@ -200,6 +200,7 @@ return {
         'gosum',
         'gowork',
         'nginx',
+        'xml',
       }
       local filetypes = {
         'c',
@@ -228,6 +229,7 @@ return {
         'gosum',
         'gowork',
         'nginx',
+        'msbuild',
       }
 
       require('nvim-treesitter').setup {
@@ -454,6 +456,20 @@ return {
         -- roslyn.nvim instead, so don't let mason-lspconfig auto-enable it.
         automatic_enable = { exclude = { 'omnisharp' } },
       }
+
+      -- MSBuild project files (*.csproj, *.props, *.targets): tintoy's server isn't
+      -- in the Mason registry, so it's an unzipped release (language-server.zip from
+      -- https://github.com/tintoy/msbuild-project-tools-server/releases) under
+      -- stdpath('data'). Skipped when absent so other machines still start cleanly.
+      -- The server picks its MSBuild from `dotnet --version` in its cwd and doesn't
+      -- know .NET 11 previews ("Cannot locate MSBuild engine for .NET SDK v11..."),
+      -- so it runs from its own dir, which holds a global.json pinning SDK 10.
+      local msbuild_dir = vim.fn.stdpath 'data' .. '/msbuild-project-tools-server'
+      local msbuild_dll = msbuild_dir .. '/MSBuildProjectTools.LanguageServer.Host.dll'
+      if vim.uv.fs_stat(msbuild_dll) then
+        vim.lsp.config('msbuild_project_tools_server', { cmd = { 'dotnet', msbuild_dll }, cmd_cwd = msbuild_dir })
+        vim.lsp.enable 'msbuild_project_tools_server'
+      end
 
       -- Keymaps that only apply in a buffer once an LSP has attached to it
       vim.api.nvim_create_autocmd('LspAttach', {
