@@ -169,6 +169,8 @@ return {
   -- a nil-node crash against Neovim 0.12's changed treesitter API
   -- (attempt to call method 'range' (a nil value) — see
   -- https://github.com/nvim-treesitter/nvim-treesitter/issues/8618).
+        -- show dotfiles / gitignored items by default (dimmed); `H` still toggles
+        filtered_items = { visible = true },
   -- master won't get a fix (announced archived), so this is on `main`,
   -- the actively maintained rewrite, which needs Neovim >= 0.12 and a
   -- different setup API (no more nvim-treesitter.configs / highlight.enable).
