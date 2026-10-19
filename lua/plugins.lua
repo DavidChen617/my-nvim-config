@@ -477,7 +477,9 @@ return {
       -- stdpath('data'). Skipped when absent so other machines still start cleanly.
       -- The server picks its MSBuild from `dotnet --version` in its cwd and doesn't
       -- know .NET 11 previews ("Cannot locate MSBuild engine for .NET SDK v11..."),
-      -- so it runs from its own dir, which holds a global.json pinning SDK 10.
+      -- so it runs from its own dir, which holds a global.json pinning SDK 9.0.x.
+      -- SDK 9, not 10: the server bundles NuGet.Frameworks 6.14, and SDK 10's
+      -- MSBuild references 7.9 -> MSB4184 "Could not load ... NuGet.Frameworks".
       local msbuild_dir = vim.fn.stdpath 'data' .. '/msbuild-project-tools-server'
       local msbuild_dll = msbuild_dir .. '/MSBuildProjectTools.LanguageServer.Host.dll'
       if vim.uv.fs_stat(msbuild_dll) then
