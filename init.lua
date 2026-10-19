@@ -21,6 +21,13 @@ vim.filetype.add {
     vbproj = 'msbuild',
     proj = 'msbuild',
   },
+  -- Neovim maps these exact file names to `xml`, and a filename match beats
+  -- the extension rules above, so they need their own entries.
+  filename = {
+    ['Directory.Build.props'] = 'msbuild',
+    ['Directory.Build.targets'] = 'msbuild',
+    ['Directory.Packages.props'] = 'msbuild',
+  },
 }
 -- highlight `msbuild` buffers with the xml treesitter parser
 vim.treesitter.language.register('xml', { 'msbuild' })
