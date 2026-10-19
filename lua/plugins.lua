@@ -157,6 +157,17 @@ return {
       { '<leader>e', '<cmd>Neotree toggle<CR>', desc = 'Toggle file explorer' },
     },
     opts = {
+      -- neo-tree hardcodes number/relativenumber = false on its window (no config
+      -- option), so turn them back on whenever its buffer is entered.
+      event_handlers = {
+        {
+          event = 'neo_tree_buffer_enter',
+          handler = function()
+            vim.opt_local.number = true
+            vim.opt_local.relativenumber = true
+          end,
+        },
+      },
       filesystem = {
         follow_current_file = { enabled = true },
         hijack_netrw_behavior = 'open_current',
