@@ -65,6 +65,7 @@ return {
   {
     'lewis6991/gitsigns.nvim',
     opts = {
+      current_line_blame = true, -- on by default; <leader>tb toggles
       on_attach = function(bufnr)
         local gs = require('gitsigns')
         local function map(mode, l, r, desc)
