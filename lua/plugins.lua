@@ -744,6 +744,23 @@ return {
     },
   },
 
+  -- Interactive machine translation
+  {
+    'potamides/pantran.nvim',
+    cmd = 'Pantran',
+    opts = {
+      default_engine = 'google',
+      engines = {
+        google = {
+          default_target = 'zh-TW',
+          fallback = {
+            default_target = 'zh-TW',
+          },
+        },
+      },
+    },
+  },
+
   -- Debug Adapter Protocol (C# debugging via netcoredbg)
   {
     'mfussenegger/nvim-dap',
