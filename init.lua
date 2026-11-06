@@ -1,5 +1,6 @@
 require 'options'
 require 'keymaps'
+require('cs_template').setup()
 
 -- Neovim's built-in `.tf` detection is content-based (vim.filetype.detect.tf):
 -- it falls back to the legacy Tcl-style `tf` filetype whenever every
