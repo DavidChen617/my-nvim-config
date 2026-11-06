@@ -71,7 +71,6 @@ return {
       numhl = true, -- toggle_numhl
       linehl = true, -- toggle_linehl
       word_diff = true, -- toggle_word_diff
-      show_deleted = true, -- toggle_deleted
       on_attach = function(bufnr)
         local gs = require('gitsigns')
         local function map(mode, l, r, desc)
