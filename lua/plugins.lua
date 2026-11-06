@@ -199,6 +199,9 @@ return {
       local parsers = {
         'c',
         'c_sharp',
+        'razor',
+        'html',
+        'css',
         'bash',
         'yaml',
         'json',
@@ -224,6 +227,9 @@ return {
       local filetypes = {
         'c',
         'cs',
+        'razor',
+        'html',
+        'css',
         'sh',
         'bash',
         'yaml',
@@ -636,7 +642,7 @@ return {
   -- C# / .NET LSP (Roslyn language server, the modern replacement for OmniSharp)
   {
     'seblyng/roslyn.nvim',
-    ft = 'cs',
+    ft = { 'cs', 'razor' },
     -- Server-specific settings (e.g. inlay hints) go through vim.lsp.config,
     -- not the plugin's own `opts` table — RoslynNvimConfig (opts) only
     -- covers filewatching/target-selection, it has no `settings` field.
@@ -717,7 +723,10 @@ return {
       {
         '<leader>f',
         function()
-          require('conform').format { async = true }
+          require('conform').format {
+            async = true,
+            lsp_format = 'fallback',
+          }
         end,
         desc = 'Format buffer',
       },
