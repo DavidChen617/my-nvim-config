@@ -733,6 +733,7 @@ return {
     },
     opts = {
       formatters_by_ft = {
+        c = { 'clang-format' },
         lua = { 'stylua' },
         sh = { 'shfmt' },
         javascript = { 'prettier' },
@@ -741,6 +742,22 @@ return {
         yaml = { 'prettier' },
         markdown = { 'prettier' },
         nginx = { 'nginxfmt' }, -- needs `:MasonInstall nginx-config-formatter`
+      },
+      -- Forward EditorConfig-derived buffer indentation to clang-format.
+      formatters = {
+        ['clang-format'] = {
+          prepend_args = function(_, ctx)
+            local bo = vim.bo[ctx.buf]
+            local width = bo.shiftwidth == 0 and bo.tabstop or bo.shiftwidth
+            local style = string.format(
+              '{BasedOnStyle: LLVM, IndentWidth: %d, TabWidth: %d, UseTab: %s}',
+              width,
+              bo.tabstop,
+              bo.expandtab and 'Never' or 'Always'
+            )
+            return { '--style=' .. style }
+          end,
+        },
       },
       -- No formatter registered for 'cs': lsp_format = 'fallback' below makes
       -- conform hand C# off to the buffer's LSP client (roslyn.nvim's Roslyn
