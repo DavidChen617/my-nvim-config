@@ -805,7 +805,8 @@ return {
       -- macOS this is left out here and installed manually instead (see
       -- netcoredbg_path below). Linux has a proper native mason build.
       require('mason-nvim-dap').setup {
-        ensure_installed = platform.is_linux and { 'netcoredbg', 'delve' } or { 'delve' },
+        -- This list takes DAP adapter names; coreclr installs the netcoredbg package.
+        ensure_installed = platform.is_linux and { 'coreclr', 'delve' } or { 'delve' },
         automatic_installation = true,
       }
 
@@ -878,6 +879,10 @@ return {
           type = 'coreclr',
           name = 'launch - netcoredbg',
           request = 'launch',
+          env = {
+            ASPNETCORE_URLS = 'http://localhost:8080',
+            ASPNETCORE_ENVIRONMENT = 'Development',
+          },
           program = function()
             return vim.fn.input('Path to dll: ', vim.fn.getcwd() .. '/bin/Debug/', 'file')
           end,
