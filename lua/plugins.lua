@@ -475,8 +475,13 @@ return {
         vim.lsp.config(name, cfg)
       end
 
+      -- Mason builds gopls (and delve below) with `go install`, so only
+      -- auto-install them on machines that have a Go toolchain.
+      local has_go = vim.fn.executable 'go' == 1
       require('mason-lspconfig').setup {
-        ensure_installed = vim.tbl_keys(servers),
+        ensure_installed = vim.tbl_filter(function(name)
+          return has_go or name ~= 'gopls'
+        end, vim.tbl_keys(servers)),
         -- omnisharp is left over from the old config; C# is handled by
         -- roslyn.nvim instead, so don't let mason-lspconfig auto-enable it.
         automatic_enable = { exclude = { 'omnisharp' } },
@@ -806,7 +811,7 @@ return {
       -- netcoredbg_path below). Linux has a proper native mason build.
       require('mason-nvim-dap').setup {
         -- This list takes DAP adapter names; coreclr installs the netcoredbg package.
-        ensure_installed = platform.is_linux and { 'coreclr', 'delve' } or { 'delve' },
+        ensure_installed = vim.list_extend(platform.is_linux and { 'coreclr' } or {}, vim.fn.executable 'go' == 1 and { 'delve' } or {}),
         automatic_installation = true,
       }
 
